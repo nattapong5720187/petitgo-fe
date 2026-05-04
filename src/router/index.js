@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
@@ -13,10 +14,7 @@ const routes = [
     component: () => import('@/layouts/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      {
-        path: '',
-        redirect: '/dashboard',
-      },
+      { path: '', redirect: '/dashboard' },
       {
         path: 'dashboard',
         name: 'Dashboard',
@@ -37,12 +35,20 @@ const routes = [
         name: 'Settings',
         component: () => import('@/pages/SettingsPage.vue'),
       },
+      {
+        path: 'users',
+        name: 'Users',
+        component: () => import('@/pages/UserManagementPage.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'change-password',
+        name: 'ChangePassword',
+        component: () => import('@/pages/ChangePasswordPage.vue'),
+      },
     ],
   },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/dashboard',
-  },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
 const router = createRouter({
@@ -50,15 +56,28 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next('/login')
-  } else if (to.path === '/login' && authStore.isLoggedIn) {
-    next('/dashboard')
-  } else {
-    next()
+
+  // รอให้ Firebase Auth โหลดเสร็จก่อนตรวจ route
+  if (authStore.loading) {
+    await new Promise(resolve => {
+      const stop = watch(() => authStore.loading, val => {
+        if (!val) { stop(); resolve() }
+      })
+    })
   }
+
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    return next('/login')
+  }
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return next('/dashboard')
+  }
+  if (to.path === '/login' && authStore.isLoggedIn) {
+    return next('/dashboard')
+  }
+  next()
 })
 
 export default router
