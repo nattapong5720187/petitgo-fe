@@ -11,7 +11,6 @@
       @collapse="collapsed = true"
       @expand="collapsed = false"
     >
-      <!-- Logo -->
       <div class="logo-area" :class="{ collapsed }">
         <div class="logo-icon">🐾</div>
         <transition name="fade">
@@ -19,7 +18,6 @@
         </transition>
       </div>
 
-      <!-- Navigation -->
       <n-menu
         :collapsed="collapsed"
         :collapsed-width="64"
@@ -32,22 +30,24 @@
 
     <!-- Main Content Area -->
     <n-layout>
-      <!-- Header -->
       <n-layout-header bordered style="height: 56px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
         <div class="page-title">{{ pageTitle }}</div>
-        <div style="display: flex; align-items: center; gap: 12px;">
+
+        <div style="display: flex; align-items: center; gap: 8px">
           <n-tag type="success" size="small">
             <template #icon><n-icon :component="PersonOutline" /></template>
-            {{ authStore.user?.username }}
+            {{ authStore.userProfile?.firstName || authStore.userProfile?.username }}
+            <n-tag v-if="authStore.isAdmin" type="warning" size="small" style="margin-left: 4px">Admin</n-tag>
           </n-tag>
-          <n-button quaternary size="small" @click="handleLogout">
-            <template #icon><n-icon :component="LogOutOutline" /></template>
-            ออกจากระบบ
-          </n-button>
+
+          <n-dropdown :options="userMenuOptions" @select="handleUserMenu" trigger="click">
+            <n-button quaternary size="small">
+              <template #icon><n-icon :component="EllipsisVerticalOutline" /></template>
+            </n-button>
+          </n-dropdown>
         </div>
       </n-layout-header>
 
-      <!-- Page Content -->
       <n-layout-content style="padding: 24px; overflow-y: auto; height: calc(100vh - 56px);">
         <router-view />
       </n-layout-content>
@@ -66,7 +66,10 @@ import {
   CubeOutline,
   SettingsOutline,
   PersonOutline,
+  PeopleOutline,
+  KeyOutline,
   LogOutOutline,
+  EllipsisVerticalOutline,
 } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 
@@ -80,27 +83,23 @@ function renderIcon(icon) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-const menuOptions = [
-  {
-    label: 'แดชบอร์ด',
-    key: 'dashboard',
-    icon: renderIcon(BarChartOutline),
-  },
-  {
-    label: 'Order Summary',
-    key: 'orders',
-    icon: renderIcon(ListOutline),
-  },
-  {
-    label: 'จัดการกล่อง',
-    key: 'boxes',
-    icon: renderIcon(CubeOutline),
-  },
-  {
-    label: 'ตั้งค่า',
-    key: 'settings',
-    icon: renderIcon(SettingsOutline),
-  },
+const menuOptions = computed(() => {
+  const base = [
+    { label: 'แดชบอร์ด', key: 'dashboard', icon: renderIcon(BarChartOutline) },
+    { label: 'Order Summary', key: 'orders', icon: renderIcon(ListOutline) },
+    { label: 'จัดการกล่อง', key: 'boxes', icon: renderIcon(CubeOutline) },
+    { label: 'ตั้งค่า', key: 'settings', icon: renderIcon(SettingsOutline) },
+  ]
+  if (authStore.isAdmin) {
+    base.push({ label: 'จัดการผู้ใช้', key: 'users', icon: renderIcon(PeopleOutline) })
+  }
+  return base
+})
+
+const userMenuOptions = [
+  { label: 'เปลี่ยนรหัสผ่าน', key: 'change-password', icon: renderIcon(KeyOutline) },
+  { type: 'divider', key: 'divider' },
+  { label: 'ออกจากระบบ', key: 'logout', icon: renderIcon(LogOutOutline) },
 ]
 
 const activeKey = computed(() => route.name?.toLowerCase() || 'dashboard')
@@ -111,24 +110,32 @@ const pageTitle = computed(() => {
     orders: 'Order Summary',
     boxes: 'จัดการกล่อง',
     settings: 'ตั้งค่า',
+    users: 'จัดการผู้ใช้งาน',
+    changepassword: 'เปลี่ยนรหัสผ่าน',
   }
   return titles[route.name?.toLowerCase()] || 'Petitgo'
 })
 
-function handleMenuSelect(key) {
-  const routes = {
-    dashboard: '/dashboard',
-    orders: '/orders',
-    boxes: '/boxes',
-    settings: '/settings',
-  }
-  if (routes[key]) router.push(routes[key])
+const routeMap = {
+  dashboard: '/dashboard',
+  orders: '/orders',
+  boxes: '/boxes',
+  settings: '/settings',
+  users: '/users',
 }
 
-function handleLogout() {
-  authStore.logout()
-  message.success('ออกจากระบบสำเร็จ')
-  router.push('/login')
+function handleMenuSelect(key) {
+  if (routeMap[key]) router.push(routeMap[key])
+}
+
+async function handleUserMenu(key) {
+  if (key === 'logout') {
+    await authStore.logout()
+    message.success('ออกจากระบบสำเร็จ')
+    router.push('/login')
+  } else if (key === 'change-password') {
+    router.push('/change-password')
+  }
 }
 </script>
 

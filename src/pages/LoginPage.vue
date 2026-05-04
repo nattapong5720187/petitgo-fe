@@ -104,9 +104,7 @@ async function handleLogin() {
   loading.value = true
   errorMsg.value = ''
 
-  await new Promise(r => setTimeout(r, 600))
-
-  const ok = authStore.login(form.username, form.password)
+  const ok = await authStore.login(form.username, form.password)
   loading.value = false
 
   if (ok) {
