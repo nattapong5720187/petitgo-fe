@@ -1,9 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // อนุญาตให้ผู้ใช้ที่ login แล้วอ่าน/เขียนได้ทุก collection
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthed() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      // Any authenticated user can read their own profile
+      allow get: if isOwner(userId) || isAdmin();
+      // Only admins can list all users
+      allow list: if isAdmin();
+      // Authenticated users can create (needed for first-time admin seed and user creation via secondary auth)
+      allow create: if isAuthed();
+      // Users can update their own profile; admins can update anyone
+      allow update: if isOwner(userId) || isAdmin();
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+
+    // All other collections: authenticated users only
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAuthed();
     }
   }
 }
