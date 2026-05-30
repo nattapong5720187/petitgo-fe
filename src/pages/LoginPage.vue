@@ -1,6 +1,5 @@
 <template>
   <div class="login-container">
-    <!-- Background decoration -->
     <div class="bg-decoration">
       <div class="circle circle-1"></div>
       <div class="circle circle-2"></div>
@@ -8,59 +7,30 @@
     </div>
 
     <n-card class="login-card" :bordered="false">
-      <!-- Logo -->
       <div class="login-logo">
         <div class="logo-icon">🐾</div>
         <h1 class="logo-title">Petitgo</h1>
         <p class="logo-subtitle">Management System</p>
       </div>
 
-      <n-divider style="margin: 16px 0" />
+      <n-divider style="margin: 20px 0" />
 
-      <!-- Login Form -->
-      <n-form ref="formRef" :model="form" :rules="rules" @keydown.enter="handleLogin">
-        <n-form-item path="username" label="ชื่อผู้ใช้">
-          <n-input
-            v-model:value="form.username"
-            placeholder="กรอกชื่อผู้ใช้"
-            size="large"
-            :disabled="loading"
-          >
-            <template #prefix>
-              <n-icon :component="PersonOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+      <n-alert v-if="errorMsg" type="error" :bordered="false" style="margin-bottom: 16px">
+        {{ errorMsg }}
+      </n-alert>
 
-        <n-form-item path="password" label="รหัสผ่าน">
-          <n-input
-            v-model:value="form.password"
-            type="password"
-            placeholder="กรอกรหัสผ่าน"
-            size="large"
-            show-password-on="click"
-            :disabled="loading"
-          >
-            <template #prefix>
-              <n-icon :component="LockClosedOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
-
-        <n-alert v-if="errorMsg" type="error" :bordered="false" style="margin-bottom: 16px">
-          {{ errorMsg }}
-        </n-alert>
-
-        <n-button
-          type="primary"
-          size="large"
-          block
-          :loading="loading"
-          @click="handleLogin"
-        >
-          เข้าสู่ระบบ
-        </n-button>
-      </n-form>
+      <button class="google-btn" :disabled="loading" @click="handleGoogleLogin">
+        <span class="google-icon" v-if="!loading">
+          <svg viewBox="0 0 48 48" width="20" height="20">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+        </span>
+        <n-spin v-else size="small" style="margin-right: 8px" />
+        <span>{{ loading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบด้วย Google' }}</span>
+      </button>
 
       <div class="login-footer">
         <n-text depth="3" style="font-size: 12px">
@@ -72,45 +42,33 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-const formRef = ref(null)
 const loading = ref(false)
 const errorMsg = ref('')
 
-const form = reactive({
-  username: '',
-  password: '',
-})
-
-const rules = {
-  username: { required: true, message: 'กรุณากรอกชื่อผู้ใช้', trigger: 'blur' },
-  password: { required: true, message: 'กรุณากรอกรหัสผ่าน', trigger: 'blur' },
-}
-
-async function handleLogin() {
-  try {
-    await formRef.value?.validate()
-  } catch {
-    return
-  }
-
+async function handleGoogleLogin() {
   loading.value = true
   errorMsg.value = ''
 
-  const ok = await authStore.login(form.username, form.password)
+  const result = await authStore.loginWithGoogle()
   loading.value = false
 
-  if (ok) {
+  if (result.ok) {
     router.push('/dashboard')
-  } else {
-    errorMsg.value = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'
+  } else if (!result.cancelled) {
+    if (result.error === 'user_not_registered') {
+      errorMsg.value = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงระบบ กรุณาติดต่อผู้ดูแล'
+    } else if (result.error === 'auth/popup-blocked') {
+      errorMsg.value = 'Popup ถูกบล็อก กรุณาอนุญาต popup สำหรับเว็บไซต์นี้แล้วลองใหม่'
+    } else {
+      errorMsg.value = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+    }
   }
 }
 </script>
@@ -139,26 +97,9 @@ async function handleLogin() {
   background: white;
 }
 
-.circle-1 {
-  width: 400px;
-  height: 400px;
-  top: -100px;
-  right: -100px;
-}
-
-.circle-2 {
-  width: 250px;
-  height: 250px;
-  bottom: -50px;
-  left: -50px;
-}
-
-.circle-3 {
-  width: 150px;
-  height: 150px;
-  bottom: 120px;
-  right: 80px;
-}
+.circle-1 { width: 400px; height: 400px; top: -100px; right: -100px; }
+.circle-2 { width: 250px; height: 250px; bottom: -50px; left: -50px; }
+.circle-3 { width: 150px; height: 150px; bottom: 120px; right: 80px; }
 
 .login-card {
   width: 400px;
@@ -173,10 +114,7 @@ async function handleLogin() {
   margin-bottom: 8px;
 }
 
-.logo-icon {
-  font-size: 48px;
-  margin-bottom: 8px;
-}
+.logo-icon { font-size: 48px; margin-bottom: 8px; }
 
 .logo-title {
   font-size: 28px;
@@ -187,11 +125,37 @@ async function handleLogin() {
   margin: 0;
 }
 
-.logo-subtitle {
-  color: #999;
-  font-size: 13px;
-  margin: 4px 0 0;
+.logo-subtitle { color: #999; font-size: 13px; margin: 4px 0 0; }
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #3c4043;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  font-family: inherit;
 }
+
+.google-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.google-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.google-icon { display: flex; align-items: center; }
 
 .login-footer {
   text-align: center;

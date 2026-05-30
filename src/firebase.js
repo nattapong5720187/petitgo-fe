@@ -1,19 +1,20 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { getAuth, onAuthStateChanged, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyAaVJ2tKrovakENIgMrUjkhn0UKIEuFxmQ',
-  authDomain: 'pet-it-go.firebaseapp.com',
-  projectId: 'pet-it-go',
-  storageBucket: 'pet-it-go.appspot.com',
-  messagingSenderId: '895634110868',
-  appId: '1:895634110868:web:cca265638d7650b9de3781',
-  measurementId: 'G-XBT3642LRP',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
+export const googleProvider = new GoogleAuthProvider()
 
 // Firestore — default database (ID: petitgo-erp ต้องสร้างใน Firebase Console ก่อน)
 // ถ้าใช้ named database: getFirestore(app, 'petitgo-erp')

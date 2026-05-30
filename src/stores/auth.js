@@ -1,29 +1,25 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-} from 'firebase/auth'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
-import { auth, db } from '@/firebase'
-import { usernameToEmail } from '@/services/userService'
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db, googleProvider } from '@/firebase'
+
+const TOKEN_KEY = 'petitgo_access_token'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const userProfile = ref(null)
   const loading = ref(true)
 
-  const isLoggedIn = computed(() => !!user.value)
-  const isAdmin = computed(() => userProfile.value?.role === 'admin')
+  const isLoggedIn = computed(() => !!user.value && !!localStorage.getItem(TOKEN_KEY))
+  const isAdmin = computed(() => userProfile.value?.role === 'ADMIN' || userProfile.value?.role === 'admin')
 
   onAuthStateChanged(auth, async (firebaseUser) => {
     try {
       if (firebaseUser) {
         user.value = firebaseUser
 
-        // 1. Try Firestore (source of truth)
+        // 1. Firestore is source of truth for profile
         try {
           const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
           if (snap.exists()) {
@@ -32,36 +28,17 @@ export const useAuthStore = defineStore('auth', () => {
             return
           }
         } catch {
-          // Firestore blocked — fall through to fallbacks
+          // Firestore unavailable — fall through to cache
         }
 
-        // 2. Use localStorage cache (for users who logged in before)
+        // 2. localStorage profile cache (offline fallback)
         const cached = localStorage.getItem('petitgo_profile_' + firebaseUser.uid)
         if (cached) {
           userProfile.value = JSON.parse(cached)
           return
         }
 
-        // 3. Derive admin profile from email (ใช้เมื่อ Firestore ยังไม่พร้อม)
-        const adminEmail = usernameToEmail('admin')
-        if (firebaseUser.email === adminEmail) {
-          const profileData = {
-            uid: firebaseUser.uid,
-            username: 'admin',
-            firstName: 'Admin',
-            lastName: 'Petitgo',
-            phone: '',
-            role: 'admin',
-            email: adminEmail,
-            createdAt: new Date().toISOString(),
-          }
-          userProfile.value = profileData
-          localStorage.setItem('petitgo_profile_' + firebaseUser.uid, JSON.stringify(profileData))
-          // Write to Firestore in background (จะสำเร็จเมื่อ rules พร้อม)
-          setDoc(doc(db, 'users', firebaseUser.uid), profileData).catch(() => {})
-        } else {
-          userProfile.value = null
-        }
+        userProfile.value = null
       } else {
         user.value = null
         userProfile.value = null
@@ -73,47 +50,48 @@ export const useAuthStore = defineStore('auth', () => {
     }
   })
 
-  async function login(username, password) {
-    const email = usernameToEmail(username)
+  async function loginWithGoogle() {
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      return true
-    } catch (err) {
-      // สร้าง admin ครั้งแรกถ้ายังไม่มีใน Firebase Auth
-      if (
-        (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') &&
-        username === 'admin' && password === '123456'
-      ) {
-        return await _seedAdmin()
-      }
-      return false
-    }
-  }
+      // 1. Google popup
+      const { user: googleUser } = await signInWithPopup(auth, googleProvider)
 
-  async function _seedAdmin() {
-    try {
-      const email = usernameToEmail('admin')
-      const { user: adminUser } = await createUserWithEmailAndPassword(auth, email, '123456')
-      await setDoc(doc(db, 'users', adminUser.uid), {
-        uid: adminUser.uid,
-        username: 'admin',
-        firstName: 'Admin',
-        lastName: 'Petitgo',
-        phone: '',
-        role: 'admin',
-        email,
-        createdAt: new Date().toISOString(),
+      // 2. Get Firebase ID token
+      const idToken = await googleUser.getIdToken()
+
+      // 3. Exchange with backend — backend verifies token + checks Firestore role
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
       })
-      return true
-    } catch (e) {
-      console.error('[seedAdmin] error:', e.code, e.message)
-      return false
+
+      if (!res.ok) {
+        // User authenticated with Google but not registered / not allowed
+        await signOut(auth)
+        if (res.status === 403) return { ok: false, error: 'user_not_registered' }
+        return { ok: false, error: 'backend_error' }
+      }
+
+      const { accessToken } = await res.json()
+      localStorage.setItem(TOKEN_KEY, accessToken)
+
+      return { ok: true }
+    } catch (err) {
+      if (
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request'
+      ) {
+        return { ok: false, cancelled: true }
+      }
+      console.error('[loginWithGoogle]', err.code || err.message)
+      return { ok: false, error: 'unknown' }
     }
   }
 
   async function logout() {
+    localStorage.removeItem(TOKEN_KEY)
     await signOut(auth)
   }
 
-  return { user, userProfile, isLoggedIn, isAdmin, loading, login, logout }
+  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, logout }
 })
