@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -52,11 +52,29 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const errorMsg = ref('')
 
+// Handle result after redirect-based sign-in returns to this page
+onMounted(async () => {
+  loading.value = true
+  const result = await authStore.handleRedirectResult()
+  loading.value = false
+  if (result?.ok) {
+    router.push('/dashboard')
+  } else if (result?.error === 'user_not_registered') {
+    errorMsg.value = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงระบบ กรุณาติดต่อผู้ดูแล'
+  }
+})
+
 async function handleGoogleLogin() {
   loading.value = true
   errorMsg.value = ''
 
   const result = await authStore.loginWithGoogle()
+
+  if (result?.redirecting) {
+    // Page will redirect to Google — keep spinner showing
+    return
+  }
+
   loading.value = false
 
   if (result.ok) {
@@ -64,8 +82,6 @@ async function handleGoogleLogin() {
   } else if (!result.cancelled) {
     if (result.error === 'user_not_registered') {
       errorMsg.value = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงระบบ กรุณาติดต่อผู้ดูแล'
-    } else if (result.error === 'auth/popup-blocked') {
-      errorMsg.value = 'Popup ถูกบล็อก กรุณาอนุญาต popup สำหรับเว็บไซต์นี้แล้วลองใหม่'
     } else {
       errorMsg.value = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
     }
@@ -102,7 +118,7 @@ async function handleGoogleLogin() {
 .circle-3 { width: 150px; height: 150px; bottom: 120px; right: 80px; }
 
 .login-card {
-  width: 400px;
+  width: min(400px, calc(100vw - 32px));
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;

@@ -1,7 +1,8 @@
 <template>
-  <n-layout has-sider style="height: 100vh">
-    <!-- Sidebar -->
+  <n-layout :has-sider="!isMobile" style="height: 100vh">
+    <!-- Desktop Sidebar -->
     <n-layout-sider
+      v-if="!isMobile"
       bordered
       collapse-mode="width"
       :collapsed-width="64"
@@ -17,7 +18,6 @@
           <span v-if="!collapsed" class="logo-text">Petitgo</span>
         </transition>
       </div>
-
       <n-menu
         :collapsed="collapsed"
         :collapsed-width="64"
@@ -28,15 +28,33 @@
       />
     </n-layout-sider>
 
+    <!-- Mobile Drawer -->
+    <n-drawer v-if="isMobile" v-model:show="drawerOpen" placement="left" :width="220">
+      <div class="logo-area">
+        <div class="logo-icon">🐾</div>
+        <span class="logo-text">Petitgo</span>
+      </div>
+      <n-menu
+        :options="menuOptions"
+        :value="activeKey"
+        @update:value="handleMenuSelect"
+      />
+    </n-drawer>
+
     <!-- Main Content Area -->
     <n-layout>
-      <n-layout-header bordered style="height: 56px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
-        <div class="page-title">{{ pageTitle }}</div>
+      <n-layout-header bordered class="app-header">
+        <div class="header-left">
+          <n-button v-if="isMobile" quaternary size="small" @click="drawerOpen = true">
+            <template #icon><n-icon :component="MenuOutline" /></template>
+          </n-button>
+          <div class="page-title">{{ pageTitle }}</div>
+        </div>
 
-        <div style="display: flex; align-items: center; gap: 8px">
+        <div class="header-right">
           <n-tag type="success" size="small">
             <template #icon><n-icon :component="PersonOutline" /></template>
-            {{ authStore.userProfile?.firstName || authStore.userProfile?.username }}
+            <span class="user-name">{{ displayName }}</span>
             <n-tag v-if="authStore.isAdmin" type="warning" size="small" style="margin-left: 4px">Admin</n-tag>
           </n-tag>
 
@@ -48,7 +66,7 @@
         </div>
       </n-layout-header>
 
-      <n-layout-content style="padding: 24px; overflow-y: auto; height: calc(100vh - 56px);">
+      <n-layout-content class="app-content">
         <router-view />
       </n-layout-content>
     </n-layout>
@@ -56,7 +74,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { NIcon } from 'naive-ui'
@@ -67,9 +85,9 @@ import {
   SettingsOutline,
   PersonOutline,
   PeopleOutline,
-  KeyOutline,
   LogOutOutline,
   EllipsisVerticalOutline,
+  MenuOutline,
 } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 
@@ -78,6 +96,16 @@ const route = useRoute()
 const message = useMessage()
 const authStore = useAuthStore()
 const collapsed = ref(false)
+const drawerOpen = ref(false)
+const isMobile = ref(window.innerWidth < 768)
+
+function onResize() {
+  isMobile.value = window.innerWidth < 768
+  if (!isMobile.value) drawerOpen.value = false
+}
+
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 function renderIcon(icon) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -97,12 +125,15 @@ const menuOptions = computed(() => {
 })
 
 const userMenuOptions = [
-  { label: 'เปลี่ยนรหัสผ่าน', key: 'change-password', icon: renderIcon(KeyOutline) },
-  { type: 'divider', key: 'divider' },
   { label: 'ออกจากระบบ', key: 'logout', icon: renderIcon(LogOutOutline) },
 ]
 
 const activeKey = computed(() => route.name?.toLowerCase() || 'dashboard')
+
+const displayName = computed(() => {
+  const p = authStore.userProfile
+  return p?.name || p?.firstName || p?.username || ''
+})
 
 const pageTitle = computed(() => {
   const titles = {
@@ -111,7 +142,6 @@ const pageTitle = computed(() => {
     boxes: 'จัดการกล่อง',
     settings: 'ตั้งค่า',
     users: 'จัดการผู้ใช้งาน',
-    changepassword: 'เปลี่ยนรหัสผ่าน',
   }
   return titles[route.name?.toLowerCase()] || 'Petitgo'
 })
@@ -126,6 +156,7 @@ const routeMap = {
 
 function handleMenuSelect(key) {
   if (routeMap[key]) router.push(routeMap[key])
+  if (isMobile.value) drawerOpen.value = false
 }
 
 async function handleUserMenu(key) {
@@ -133,13 +164,56 @@ async function handleUserMenu(key) {
     await authStore.logout()
     message.success('ออกจากระบบสำเร็จ')
     router.push('/login')
-  } else if (key === 'change-password') {
-    router.push('/change-password')
   }
 }
 </script>
 
 <style scoped>
+.app-header {
+  height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-content {
+  padding: 24px;
+  overflow-y: auto;
+  height: calc(100vh - 56px);
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding: 12px;
+  }
+
+  .user-name {
+    max-width: 80px;
+  }
+}
+
 .logo-area {
   height: 56px;
   display: flex;
@@ -172,6 +246,9 @@ async function handleUserMenu(key) {
   font-size: 16px;
   font-weight: 600;
   color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fade-enter-active, .fade-leave-active {

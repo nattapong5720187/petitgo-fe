@@ -113,7 +113,7 @@
     </n-grid>
 
     <!-- Add/Edit Modal -->
-    <n-modal v-model:show="showAddModal" preset="card" title="บันทึกข้อมูลกล่อง" style="width: 480px">
+    <n-modal v-model:show="showAddModal" preset="card" title="บันทึกข้อมูลกล่อง" style="width: min(480px, calc(100vw - 16px))">
       <n-form :model="addForm" ref="addFormRef" label-placement="left" label-width="120">
         <n-form-item label="วันที่ตรวจ" path="date">
           <n-date-picker v-model:value="addForm.dateTs" type="date" format="d/M/yyyy" style="width: 100%" />

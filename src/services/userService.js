@@ -1,9 +1,6 @@
 import {
   createUserWithEmailAndPassword,
   signOut,
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
 } from 'firebase/auth'
 import {
   doc, setDoc, getDoc, getDocs, collection,
@@ -26,6 +23,7 @@ export async function createUser({ username, password, firstName, lastName, phon
     username,
     firstName,
     lastName,
+    name: `${firstName} ${lastName}`.trim(),
     phone: phone || '',
     role,
     email,
@@ -43,14 +41,6 @@ export async function getUsers() {
 export async function getUserByUid(uid) {
   const snap = await getDoc(doc(db, USERS_COL, uid))
   return snap.exists() ? snap.data() : null
-}
-
-export async function changePassword(currentPassword, newPassword) {
-  const user = auth.currentUser
-  if (!user) throw new Error('ไม่พบผู้ใช้งาน')
-  const credential = EmailAuthProvider.credential(user.email, currentPassword)
-  await reauthenticateWithCredential(user, credential)
-  await updatePassword(user, newPassword)
 }
 
 export function generatePassword(length = 12) {

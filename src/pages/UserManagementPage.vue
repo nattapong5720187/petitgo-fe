@@ -19,8 +19,8 @@
     </n-card>
 
     <!-- Create User Modal -->
-    <n-modal v-model:show="showModal" preset="card" title="สร้างผู้ใช้งานใหม่" style="width: 500px">
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="left" label-width="110px">
+    <n-modal v-model:show="showModal" preset="card" title="สร้างผู้ใช้งานใหม่" style="width: min(500px, calc(100vw - 16px))">
+      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
         <n-form-item label="ชื่อผู้ใช้" path="username">
           <n-input v-model:value="form.username" placeholder="กรอกชื่อผู้ใช้" />
         </n-form-item>

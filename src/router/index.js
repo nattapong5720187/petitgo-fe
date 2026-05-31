@@ -41,11 +41,6 @@ const routes = [
         component: () => import('@/pages/UserManagementPage.vue'),
         meta: { requiresAdmin: true },
       },
-      {
-        path: 'change-password',
-        name: 'ChangePassword',
-        component: () => import('@/pages/ChangePasswordPage.vue'),
-      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },

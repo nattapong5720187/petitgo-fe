@@ -9,7 +9,7 @@
             v-model:value="search"
             placeholder="ค้นหา Order No, ชื่อสินค้า..."
             clearable
-            style="width: 260px"
+            class="search-input"
           >
             <template #prefix><n-icon :component="SearchOutline" /></template>
           </n-input>
@@ -33,7 +33,7 @@
           />
         </div>
 
-        <div style="display: flex; gap: 8px;">
+        <div class="toolbar-actions">
           <!-- Load from Google Sheets -->
           <n-button
             :loading="sheetsStore.loading.orders"
@@ -298,8 +298,32 @@ const pagination = ref({
 .toolbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.search-input {
+  width: 260px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .search-input {
+    width: 100%;
+  }
+
+  .toolbar > div:first-child {
+    width: 100%;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+  }
 }
 </style>
