@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider } from '@/firebase'
+import api from '@/services/api'
 
 const TOKEN_KEY = 'petitgo_access_token'
 
@@ -54,6 +55,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fetchMe() {
+    if (!token.value) return false
+    try {
+      const { data } = await api.get('/user')
+      userProfile.value = data
+      return true
+    } catch {
+      token.value = null
+      userProfile.value = null
+      localStorage.removeItem(TOKEN_KEY)
+      return false
+    }
+  }
+
   async function logout() {
     localStorage.removeItem(TOKEN_KEY)
     token.value = null
@@ -61,5 +76,5 @@ export const useAuthStore = defineStore('auth', () => {
     await signOut(auth)
   }
 
-  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, logout }
+  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, logout, fetchMe }
 })

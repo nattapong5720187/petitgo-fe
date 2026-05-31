@@ -14,10 +14,17 @@ import { useAuthStore } from './stores/auth'
   app.use(router)
   app.use(naive)
 
-  // Boot the auth store before the first navigation so the router guard
-  // never sees an uninitialised loading state.
-  useAuthStore()
+  const authStore = useAuthStore()
   await authReady
+
+  // On every page load, restore the user profile from the backend if a token exists.
+  // If the token is invalid/expired, fetchMe clears state and we redirect to login.
+  if (authStore.isLoggedIn) {
+    const ok = await authStore.fetchMe()
+    if (!ok) {
+      await router.replace('/login')
+    }
+  }
 
   app.mount('#app')
 })()
