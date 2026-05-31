@@ -12,10 +12,12 @@
             <div
               v-for="entry in entriesOnDate(year, month, date)"
               :key="entry.id"
-              class="entry-dot"
+              class="entry-badge"
               :class="entry.status.toLowerCase()"
-              :title="`${entry.type} · ${entry.status}`"
-            />
+              :title="`${entry.type} · ${fmtHours(entry.startAt, entry.endAt)} · ${entry.status}`"
+            >
+              {{ entry.type }} {{ fmtHours(entry.startAt, entry.endAt) }}
+            </div>
           </div>
         </template>
       </n-calendar>
@@ -63,13 +65,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
-import { useAuthStore } from '@/stores/auth'
 import { createTimesheet, getTimesheets } from '@/services/timesheetService'
 
 const message = useMessage()
-const authStore = useAuthStore()
 
 const calValue = ref(Date.now())
 const showModal = ref(false)
@@ -116,13 +116,14 @@ function disableEndDate(ts) {
   return ts < startDay.getTime()
 }
 
-const myTimesheets = computed(() => {
-  const uid = authStore.user?.uid
-  return uid ? timesheets.value.filter(t => t.userRef === uid) : []
-})
+function fmtHours(startIso, endIso) {
+  if (!startIso || !endIso) return ''
+  const h = (new Date(endIso) - new Date(startIso)) / 3_600_000
+  return `${+h.toFixed(1)}h`
+}
 
 function entriesOnDate(year, month, date) {
-  return myTimesheets.value.filter(t => {
+  return timesheets.value.filter(t => {
     const d = new Date(t.startAt)
     return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === date
   })
@@ -130,9 +131,9 @@ function entriesOnDate(year, month, date) {
 
 function onDateClick(ts) {
   const d = new Date(ts)
-  d.setHours(18, 0, 0, 0)
+  d.setHours(18, 30, 0, 0)
   const endD = new Date(ts)
-  endD.setHours(20, 0, 0, 0)
+  endD.setHours(19, 30, 0, 0)
 
   form.value = { type: null, startAt: d.getTime(), endAt: endD.getTime(), remark: '' }
   showModal.value = true
@@ -182,20 +183,25 @@ onMounted(loadTimesheets)
 
 .cell-inner {
   display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
+  flex-direction: column;
+  gap: 2px;
   padding: 2px 0;
-  min-height: 8px;
 }
 
-.entry-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.entry-badge {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: default;
 }
 
-.entry-dot.requested { background: #f0a020; }
-.entry-dot.approved  { background: #18a058; }
-.entry-dot.rejected  { background: #d03050; }
+.entry-badge.requested { background: #f0a020; }
+.entry-badge.approved  { background: #18a058; }
+.entry-badge.rejected  { background: #d03050; }
 </style>
