@@ -1,56 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import { auth, db, googleProvider } from '@/firebase'
+import { signInWithPopup, signOut } from 'firebase/auth'
+import { auth, googleProvider } from '@/firebase'
 
 const TOKEN_KEY = 'petitgo_access_token'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const userProfile = ref(null)
-  const loading = ref(true)
+  const loading = ref(false)
+  const token = ref(localStorage.getItem(TOKEN_KEY))
 
-  const isLoggedIn = computed(() => !!user.value && !!localStorage.getItem(TOKEN_KEY))
+  const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => userProfile.value?.role === 'ADMIN' || userProfile.value?.role === 'admin')
-
-  onAuthStateChanged(auth, async (firebaseUser) => {
-    try {
-      if (firebaseUser) {
-        user.value = firebaseUser
-
-        // 1. Firestore is source of truth for profile (query by uid field, not doc ID)
-        try {
-          const q = query(collection(db, 'users'), where('uid', '==', firebaseUser.uid))
-          const snap = await getDocs(q)
-          if (!snap.empty) {
-            const data = snap.docs[0].data()
-            userProfile.value = data
-            localStorage.setItem('petitgo_profile_' + firebaseUser.uid, JSON.stringify(data))
-            return
-          }
-        } catch {
-          // Firestore unavailable — fall through to cache
-        }
-
-        // 2. localStorage profile cache (offline fallback)
-        const cached = localStorage.getItem('petitgo_profile_' + firebaseUser.uid)
-        if (cached) {
-          userProfile.value = JSON.parse(cached)
-          return
-        }
-
-        userProfile.value = null
-      } else {
-        user.value = null
-        userProfile.value = null
-      }
-    } catch (e) {
-      console.error('[onAuthStateChanged]', e.code, e.message)
-    } finally {
-      loading.value = false
-    }
-  })
 
   async function loginWithGoogle() {
     try {
@@ -76,7 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       const { accessToken, user: backendUser } = await res.json()
       localStorage.setItem(TOKEN_KEY, accessToken)
-      // Set profile immediately so isAdmin is correct before onAuthStateChanged finishes
+      token.value = accessToken
       userProfile.value = backendUser
 
       return { ok: true }
@@ -94,6 +56,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     localStorage.removeItem(TOKEN_KEY)
+    token.value = null
+    userProfile.value = null
     await signOut(auth)
   }
 
