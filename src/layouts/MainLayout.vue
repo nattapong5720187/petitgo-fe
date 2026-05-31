@@ -85,6 +85,8 @@ import {
   SettingsOutline,
   PersonOutline,
   PeopleOutline,
+  TimeOutline,
+  CheckmarkCircleOutline,
   LogOutOutline,
   EllipsisVerticalOutline,
   MenuOutline,
@@ -116,10 +118,12 @@ const menuOptions = computed(() => {
     { label: 'แดชบอร์ด', key: 'dashboard', icon: renderIcon(BarChartOutline) },
     { label: 'Order Summary', key: 'orders', icon: renderIcon(ListOutline) },
     { label: 'จัดการกล่อง', key: 'boxes', icon: renderIcon(CubeOutline) },
+    { label: 'ลงเวลาทำงาน', key: 'timesheet', icon: renderIcon(TimeOutline) },
     { label: 'ตั้งค่า', key: 'settings', icon: renderIcon(SettingsOutline) },
   ]
   if (authStore.isAdmin) {
     base.push({ label: 'จัดการผู้ใช้', key: 'users', icon: renderIcon(PeopleOutline) })
+    base.push({ label: 'อนุมัติเวลาทำงาน', key: 'timesheetapproval', icon: renderIcon(CheckmarkCircleOutline) })
   }
   return base
 })
@@ -140,6 +144,8 @@ const pageTitle = computed(() => {
     dashboard: 'แดชบอร์ด',
     orders: 'Order Summary',
     boxes: 'จัดการกล่อง',
+    timesheet: 'ลงเวลาทำงาน',
+    timesheetapproval: 'อนุมัติเวลาทำงาน',
     settings: 'ตั้งค่า',
     users: 'จัดการผู้ใช้งาน',
   }
@@ -150,6 +156,8 @@ const routeMap = {
   dashboard: '/dashboard',
   orders: '/orders',
   boxes: '/boxes',
+  timesheet: '/timesheet',
+  timesheetapproval: '/timesheet-approval',
   settings: '/settings',
   users: '/users',
 }

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db, googleProvider } from '@/firebase'
 
 const TOKEN_KEY = 'petitgo_access_token'
@@ -19,12 +19,14 @@ export const useAuthStore = defineStore('auth', () => {
       if (firebaseUser) {
         user.value = firebaseUser
 
-        // 1. Firestore is source of truth for profile
+        // 1. Firestore is source of truth for profile (query by uid field, not doc ID)
         try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-          if (snap.exists()) {
-            userProfile.value = snap.data()
-            localStorage.setItem('petitgo_profile_' + firebaseUser.uid, JSON.stringify(snap.data()))
+          const q = query(collection(db, 'users'), where('uid', '==', firebaseUser.uid))
+          const snap = await getDocs(q)
+          if (!snap.empty) {
+            const data = snap.docs[0].data()
+            userProfile.value = data
+            localStorage.setItem('petitgo_profile_' + firebaseUser.uid, JSON.stringify(data))
             return
           }
         } catch {
@@ -72,8 +74,10 @@ export const useAuthStore = defineStore('auth', () => {
         return { ok: false, error: 'backend_error' }
       }
 
-      const { accessToken } = await res.json()
+      const { accessToken, user: backendUser } = await res.json()
       localStorage.setItem(TOKEN_KEY, accessToken)
+      // Set profile immediately so isAdmin is correct before onAuthStateChanged finishes
+      userProfile.value = backendUser
 
       return { ok: true }
     } catch (err) {

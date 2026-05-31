@@ -41,6 +41,17 @@ const routes = [
         component: () => import('@/pages/UserManagementPage.vue'),
         meta: { requiresAdmin: true },
       },
+      {
+        path: 'timesheet',
+        name: 'Timesheet',
+        component: () => import('@/pages/TimesheetPage.vue'),
+      },
+      {
+        path: 'timesheet-approval',
+        name: 'TimesheetApproval',
+        component: () => import('@/pages/TimesheetApprovalPage.vue'),
+        meta: { requiresAdmin: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
