@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -52,28 +52,11 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const errorMsg = ref('')
 
-// Handle result after redirect-based sign-in returns to this page
-onMounted(async () => {
-  loading.value = true
-  const result = await authStore.handleRedirectResult()
-  loading.value = false
-  if (result?.ok) {
-    router.push('/dashboard')
-  } else if (result?.error === 'user_not_registered') {
-    errorMsg.value = 'บัญชีนี้ไม่มีสิทธิ์เข้าถึงระบบ กรุณาติดต่อผู้ดูแล'
-  }
-})
-
 async function handleGoogleLogin() {
   loading.value = true
   errorMsg.value = ''
 
   const result = await authStore.loginWithGoogle()
-
-  if (result?.redirecting) {
-    // Page will redirect to Google — keep spinner showing
-    return
-  }
 
   loading.value = false
 

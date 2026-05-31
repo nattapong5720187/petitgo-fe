@@ -20,10 +20,6 @@ export const googleProvider = new GoogleAuthProvider()
 // ถ้าใช้ named database: getFirestore(app, 'petitgo-erp')
 export const db = getFirestore(app)
 
-// Secondary app สำหรับสร้าง user โดยไม่ logout admin ออก
-export const secondaryApp = initializeApp(firebaseConfig, 'secondary')
-export const secondaryAuth = getAuth(secondaryApp)
-
 // Promise ที่ resolve เมื่อ Firebase Auth พร้อมใช้งาน
 export const authReady = new Promise(resolve => {
   const unsub = onAuthStateChanged(auth, () => {
