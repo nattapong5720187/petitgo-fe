@@ -27,26 +27,25 @@ const users = ref([])
 const tableLoading = ref(false)
 
 const columns = [
-  { title: 'ชื่อผู้ใช้', key: 'username', width: 130 },
+  { title: 'ชื่อผู้ใช้', key: 'username' },
   {
     title: 'ชื่อ-นามสกุล',
-    key: 'fullName',
-    render: row => `${row.firstName} ${row.lastName}`,
+    key: 'name'
   },
-  { title: 'เบอร์โทร', key: 'phone', render: row => row.phone || '-' },
   {
     title: 'Role',
     key: 'role',
     width: 100,
     render: row =>
-      h(NTag, { type: row.role === 'admin' ? 'warning' : 'info', size: 'small' }, () =>
-        row.role === 'admin' ? 'Admin' : 'User',
+      h(NTag, { type: row.role === 'admin' || row.role === 'ADMIN' ? 'warning' : 'info', size: 'small' }, () =>
+        row.role === 'admin' || row.role === 'ADMIN' ? 'Admin' : 'User',
       ),
   },
   {
     title: 'วันที่สร้าง',
     key: 'createdAt',
-    render: row => new Date(row.createdAt).toLocaleDateString('th-TH'),
+    render: row =>
+      row.createdAt ? new Date(row.createdAt).toLocaleDateString('th-TH') : '-',
   },
 ]
 

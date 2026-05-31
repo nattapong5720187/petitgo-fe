@@ -1,13 +1,14 @@
 import {
-  doc, getDoc, getDocs, collection,
+  doc, getDoc,
 } from 'firebase/firestore'
 import { db } from '@/firebase'
+import api from '@/services/api'
 
 const USERS_COL = 'users'
 
 export async function getUsers() {
-  const snap = await getDocs(collection(db, USERS_COL))
-  return snap.docs.map(d => d.data())
+  const { data } = await api.get('/users')
+  return data
 }
 
 export async function getUserByUid(uid) {
