@@ -1,28 +1,7 @@
 <template>
-  <n-config-provider :theme="theme" :locale="thTH" :date-locale="dateThTH">
-    <n-message-provider>
-      <n-notification-provider>
-        <n-dialog-provider>
-          <router-view />
-        </n-dialog-provider>
-      </n-notification-provider>
-    </n-message-provider>
-  </n-config-provider>
+  <router-view />
+  <Toast position="top-right" />
 </template>
-
-<script setup>
-import { computed } from 'vue'
-import {
-  NConfigProvider,
-  NMessageProvider,
-  NNotificationProvider,
-  NDialogProvider,
-  thTH,
-  dateThTH,
-} from 'naive-ui'
-
-const theme = computed(() => null) // light theme default
-</script>
 
 <style>
 * {

@@ -19,7 +19,9 @@ No test runner is configured. No linter is configured.
 
 ## Architecture
 
-Vue 3 + Vite SPA, deployed to Firebase Hosting. UI is built entirely with **Naive UI** (`naive-ui`). State is managed with **Pinia**. `@` is aliased to `src/`.
+Vue 3 + Vite SPA, deployed to Firebase Hosting. UI is built entirely with **PrimeVue 4** (`primevue`) using the Aura/Emerald preset. Icons use **PrimeIcons** (`primeicons`). State is managed with **Pinia**. `@` is aliased to `src/`.
+
+All PrimeVue components are registered globally in `src/main.js` — no per-file imports needed. Use `useToast()` from `primevue/usetoast` for notifications (replaces Naive UI's `useMessage`).
 
 ### Auth Flow
 

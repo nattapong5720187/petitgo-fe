@@ -1,20 +1,22 @@
 <template>
-  <n-card :bordered="false" style="border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow: hidden; position: relative;">
-    <div class="stat-card">
-      <div class="stat-content">
-        <div class="stat-title">{{ title }}</div>
-        <div class="stat-value" :style="{ color }">
-          <span v-if="prefix" class="stat-prefix">{{ prefix }}</span>
-          {{ formattedValue }}
+  <Card style="border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow: hidden; position: relative;">
+    <template #content>
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-title">{{ title }}</div>
+          <div class="stat-value" :style="{ color }">
+            <span v-if="prefix" class="stat-prefix">{{ prefix }}</span>
+            {{ formattedValue }}
+          </div>
+          <div v-if="subtitle" class="stat-subtitle">{{ subtitle }}</div>
         </div>
-        <div v-if="subtitle" class="stat-subtitle">{{ subtitle }}</div>
+        <div class="stat-icon" :style="{ background: `${color}18` }">
+          <i :class="['pi', icon]" :style="{ color, fontSize: '28px' }"></i>
+        </div>
       </div>
-      <div class="stat-icon" :style="{ background: `${color}15` }">
-        <n-icon :component="icon" :size="28" :color="color" />
-      </div>
-    </div>
-    <div class="stat-bar" :style="{ background: color }"></div>
-  </n-card>
+      <div class="stat-bar" :style="{ background: color }"></div>
+    </template>
+  </Card>
 </template>
 
 <script setup>
@@ -25,7 +27,7 @@ const props = defineProps({
   value: { type: Number, default: 0 },
   prefix: String,
   color: { type: String, default: '#18a058' },
-  icon: Object,
+  icon: { type: String, default: 'pi-chart-bar' },
   subtitle: String,
 })
 
@@ -45,15 +47,9 @@ const formattedValue = computed(() => {
   align-items: center;
 }
 
-.stat-content {
-  flex: 1;
-}
+.stat-content { flex: 1; }
 
-.stat-title {
-  font-size: 13px;
-  color: #888;
-  margin-bottom: 6px;
-}
+.stat-title { font-size: 13px; color: #888; margin-bottom: 6px; }
 
 .stat-value {
   font-size: 26px;
@@ -67,11 +63,7 @@ const formattedValue = computed(() => {
   margin-right: 2px;
 }
 
-.stat-subtitle {
-  font-size: 12px;
-  color: #aaa;
-  margin-top: 4px;
-}
+.stat-subtitle { font-size: 12px; color: #aaa; margin-top: 4px; }
 
 .stat-icon {
   width: 56px;
