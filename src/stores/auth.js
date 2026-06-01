@@ -55,6 +55,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithLiff() {
+    try {
+      const { initLiff, liff } = await import('@/liff')
+      await initLiff()
+      if (!liff.isLoggedIn()) {
+        liff.login()
+        return { ok: false, redirecting: true }
+      }
+      const idToken = liff.getIDToken()
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/liff-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      })
+      if (!res.ok) {
+        if (res.status === 403) return { ok: false, error: 'user_not_registered' }
+        return { ok: false, error: 'backend_error' }
+      }
+      const { accessToken, user: backendUser } = await res.json()
+      localStorage.setItem(TOKEN_KEY, accessToken)
+      token.value = accessToken
+      userProfile.value = backendUser
+      return { ok: true }
+    } catch (err) {
+      console.error('[loginWithLiff]', err)
+      return { ok: false, error: 'unknown' }
+    }
+  }
+
   async function fetchMe() {
     if (!token.value) return false
     try {
@@ -76,5 +105,5 @@ export const useAuthStore = defineStore('auth', () => {
     await signOut(auth)
   }
 
-  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, logout, fetchMe }
+  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, loginWithLiff, logout, fetchMe }
 })

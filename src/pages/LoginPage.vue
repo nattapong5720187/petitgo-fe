@@ -19,7 +19,13 @@
         {{ errorMsg }}
       </n-alert>
 
-      <button class="google-btn" :disabled="loading" @click="handleGoogleLogin">
+      <!-- LIFF: show auto-login spinner, no Google button -->
+      <div v-if="isLiff" style="text-align: center; padding: 16px 0">
+        <n-spin size="medium" />
+        <p style="margin: 12px 0 0; color: #999; font-size: 14px">กำลังเข้าสู่ระบบผ่าน LINE…</p>
+      </div>
+
+      <button v-else class="google-btn" :disabled="loading" @click="handleGoogleLogin">
         <span class="google-icon" v-if="!loading">
           <svg viewBox="0 0 48 48" width="20" height="20">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -45,8 +51,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { isLiffBrowser } from '@/liff'
 
 const router = useRouter()
+const isLiff = isLiffBrowser()
 const authStore = useAuthStore()
 
 const loading = ref(false)
