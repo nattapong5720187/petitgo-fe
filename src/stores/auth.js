@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider } from '@/firebase'
 import api from '@/services/api'
+import { initLiff, isLiffLoggedIn, liffLogin, getLiffAccessToken } from '@/services/liff'
 
 const TOKEN_KEY = 'petitgo_access_token'
 
@@ -55,6 +56,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithLiff() {
+    try {
+      await initLiff()
+
+      if (!isLiffLoggedIn()) {
+        liffLogin(window.location.href)
+        // liff.login() redirects the page — nothing after this executes
+        return { ok: false, redirecting: true }
+      }
+
+      const lineAccessToken = getLiffAccessToken()
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/liff-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: lineAccessToken }),
+      })
+
+      if (!res.ok) {
+        if (res.status === 403) return { ok: false, error: 'user_not_registered' }
+        return { ok: false, error: 'backend_error' }
+      }
+
+      const { accessToken, user: backendUser } = await res.json()
+      localStorage.setItem(TOKEN_KEY, accessToken)
+      token.value = accessToken
+      userProfile.value = backendUser
+
+      return { ok: true }
+    } catch (err) {
+      console.error('[loginWithLiff]', err)
+      return { ok: false, error: 'unknown' }
+    }
+  }
+
   async function fetchMe() {
     if (!token.value) return false
     try {
@@ -76,5 +111,5 @@ export const useAuthStore = defineStore('auth', () => {
     await signOut(auth)
   }
 
-  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, logout, fetchMe }
+  return { user, userProfile, isLoggedIn, isAdmin, loading, loginWithGoogle, loginWithLiff, logout, fetchMe }
 })
