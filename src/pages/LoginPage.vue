@@ -64,19 +64,30 @@ const authStore = useAuthStore()
 
 const loading = ref(false)
 const errorMsg = ref('')
-const isLiffBrowser = ref(false)
+
+// Pre-detect LINE in-app browser via UA before LIFF init completes
+const isLiffBrowser = ref(/Line\//i.test(navigator.userAgent))
 
 onMounted(async () => {
+  if (!isLiffBrowser.value) return
+
+  loading.value = true
+  errorMsg.value = ''
+
   try {
     await initLiff()
     isLiffBrowser.value = isInLiff()
-
-    if (isLiffBrowser.value) {
-      // Auto-login when already authenticated with LINE
-      await handleLiffLogin()
-    }
   } catch (err) {
-    // LIFF init fails in non-LINE browsers — that's expected
+    console.error('[LIFF init]', err)
+    loading.value = false
+    errorMsg.value = `LIFF เริ่มต้นไม่สำเร็จ: ${err?.message ?? err}`
+    return
+  }
+
+  if (isLiffBrowser.value) {
+    await handleLiffLogin()
+  } else {
+    loading.value = false
   }
 })
 
@@ -86,7 +97,7 @@ async function handleLiffLogin() {
 
   const result = await authStore.loginWithLiff()
 
-  if (result.redirecting) return // page will redirect to LINE login
+  if (result.redirecting) return // page will navigate away to LINE login
 
   loading.value = false
 
