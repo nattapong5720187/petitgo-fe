@@ -49,7 +49,7 @@
       </template>
     </Card>
 
-    <!-- Log Timesheet Modal -->
+    <!-- Log Timesheet Modal (non-admin) -->
     <Dialog
       v-model:visible="showModal"
       header="บันทึกเวลาทำงาน"
@@ -113,6 +113,55 @@
         <Button label="บันทึก" :loading="saving" @click="handleSave" />
       </template>
     </Dialog>
+
+    <!-- Admin: View Entries Modal -->
+    <Dialog
+      v-model:visible="showAdminModal"
+      :header="`รายการลงเวลา — ${adminModalDateLabel}`"
+      :style="{ width: 'min(520px, calc(100vw - 16px))' }"
+      modal
+    >
+      <!-- No entries -->
+      <div v-if="adminModalEntries.length === 0" class="admin-empty">
+        <i class="pi pi-calendar-times admin-empty-icon" />
+        <p>ไม่มีข้อมูลการลง OT ในวันนี้</p>
+      </div>
+
+      <!-- Entry list -->
+      <div v-else class="admin-entry-list">
+        <div
+          v-for="entry in adminModalEntries"
+          :key="entry.id"
+          class="admin-entry-card"
+        >
+          <div class="admin-entry-top">
+            <span class="admin-entry-badge" :class="entry.type?.toLowerCase().replace('-', '')">
+              {{ entry.type }}
+            </span>
+            <span class="admin-entry-status" :class="entry.status?.toLowerCase()">
+              {{ statusLabel(entry.status) }}
+            </span>
+          </div>
+          <div class="admin-entry-user" v-if="entry.requesterName || entry.user?.name || entry.user?.username">
+            <i class="pi pi-user" style="font-size:12px" />
+            {{ entry.requesterName || entry.user?.name || entry.user?.username }}
+          </div>
+          <div class="admin-entry-time">
+            <i class="pi pi-clock" style="font-size:12px" />
+            {{ fmtTime(entry.startAt) }} – {{ fmtTime(entry.endAt) }}
+            <span class="admin-entry-dur">{{ fmtHours(entry.startAt, entry.endAt) }}</span>
+          </div>
+          <div v-if="entry.remark" class="admin-entry-remark">
+            <i class="pi pi-comment" style="font-size:12px" />
+            {{ entry.remark }}
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="ปิด" outlined @click="showAdminModal = false" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -120,8 +169,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { createTimesheet, getTimesheets } from '@/services/timesheetService'
+import { useAuthStore } from '@/stores/auth'
 
 const toast = useToast()
+const authStore = useAuthStore()
 
 const currentYear = ref(new Date().getFullYear())
 const currentMonth = ref(new Date().getMonth()) // 0-indexed
@@ -130,6 +181,10 @@ const showModal = ref(false)
 const saving = ref(false)
 const timesheets = ref([])
 const errors = ref({})
+
+const showAdminModal = ref(false)
+const adminModalEntries = ref([])
+const adminModalDateLabel = ref('')
 
 const form = ref({
   type: null,
@@ -219,6 +274,12 @@ function fmtHours(startIso, endIso) {
 }
 
 function onCellClick(cell) {
+  if (authStore.isAdmin) {
+    adminModalDateLabel.value = cell.date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+    adminModalEntries.value = cell.entries
+    showAdminModal.value = true
+    return
+  }
   const d = new Date(cell.date)
   d.setHours(18, 30, 0, 0)
   const endD = new Date(cell.date)
@@ -226,6 +287,16 @@ function onCellClick(cell) {
   form.value = { type: null, startAt: d, endAt: endD, remark: '' }
   errors.value = {}
   showModal.value = true
+}
+
+function fmtTime(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+function statusLabel(status) {
+  const map = { requested: 'รออนุมัติ', approved: 'อนุมัติ', rejected: 'ปฏิเสธ' }
+  return map[status?.toLowerCase()] ?? status ?? ''
 }
 
 function validateForm() {
@@ -348,8 +419,82 @@ onMounted(loadTimesheets)
 .req { color: #d03050; }
 .error-msg { color: #d03050; font-size: 12px; }
 
+/* Admin modal */
+.admin-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 0;
+  color: var(--p-text-muted-color);
+}
+.admin-empty-icon { font-size: 36px; }
+.admin-empty p { font-size: 15px; margin: 0; }
+
+.admin-entry-list { display: flex; flex-direction: column; gap: 10px; }
+
+.admin-entry-card {
+  border: 1px solid var(--p-surface-200);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-entry-top { display: flex; align-items: center; justify-content: space-between; }
+
+.admin-entry-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  background: #888;
+}
+.admin-entry-badge.otwd { background: #f0a020; }
+.admin-entry-badge.otdo { background: #9c27b0; }
+.admin-entry-badge.live { background: #2196f3; }
+.admin-entry-badge.csfinance { background: #009688; }
+
+.admin-entry-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.admin-entry-status.requested { background: #fff3cd; color: #856404; }
+.admin-entry-status.approved { background: #d1f7e0; color: #155724; }
+.admin-entry-status.rejected { background: #fde8e8; color: #b91c1c; }
+
+.admin-entry-user,
+.admin-entry-time,
+.admin-entry-remark {
+  font-size: 13px;
+  color: var(--p-text-color);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.admin-entry-dur {
+  font-weight: 600;
+  color: var(--p-primary-500);
+  margin-left: 4px;
+}
+.admin-entry-remark { color: var(--p-text-muted-color); font-style: italic; }
+
 @media (max-width: 600px) {
-  .cal-cell { min-height: 50px; }
-  .entry-badge { display: none; }
+  .cal-cell { min-height: 56px; padding: 3px 4px; }
+  .cal-entries { flex-direction: row; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+  .entry-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
 }
 </style>

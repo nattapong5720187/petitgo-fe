@@ -190,15 +190,19 @@ function parseBoxData(rawData) {
   )
   if (headerIdx === -1) return []
 
+  const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{2,4}/
+  const VALID_SIZES = new Set(['0', 'A', 'B', '2B', 'C', 'C+8', 'D', 'E', '2E', 'F', 'F Tong', 'G', 'Reuse'])
+
   const boxes = []
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i]
     if (!row || !row[0]) continue
     const dateVal = String(row[0] || '')
     if (dateVal.includes('รวม') || dateVal.includes('ใบปะหน้า') || dateVal.includes('เทป')) break
+    if (!DATE_RE.test(dateVal)) continue
 
     const size = String(row[1] || '').trim()
-    if (!size) continue
+    if (!size || !VALID_SIZES.has(size)) continue
 
     boxes.push({
       date: dateVal,
