@@ -38,9 +38,6 @@ import router from './router'
 import { authReady } from './firebase'
 import { useAuthStore } from './stores/auth'
 
-const { default: VConsole } = await import('vconsole')
-  new VConsole()
-
 const PetitgoPreset = definePreset(Aura, {
   semantic: {
     primary: {
@@ -60,6 +57,11 @@ const PetitgoPreset = definePreset(Aura, {
 })
 
 ;(async () => {
+  if (import.meta.env.DEV) {
+    const { default: VConsole } = await import('vconsole')
+    new VConsole()
+  }
+
   const app = createApp(App)
   const pinia = createPinia()
 
