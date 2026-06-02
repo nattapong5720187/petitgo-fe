@@ -6,7 +6,22 @@
       <div class="circle circle-3"></div>
     </div>
 
-    <Card class="login-card" style="border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3)">
+    <!-- LIFF browser: fullscreen loading / error — no login form shown -->
+    <div v-if="isLiffBrowser" class="liff-overlay">
+      <div v-if="!errorMsg" class="liff-loading">
+        <ProgressSpinner style="width:48px;height:48px" strokeWidth="4" />
+        <p style="margin-top:16px;color:#fff;font-size:15px">กำลังเข้าสู่ระบบด้วย LINE…</p>
+      </div>
+      <div v-else class="liff-error">
+        <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+        <p style="color:#fff;font-size:15px;font-weight:600;margin-bottom:8px">เข้าสู่ระบบไม่สำเร็จ</p>
+        <p style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;word-break:break-all">{{ errorMsg }}</p>
+        <button class="retry-btn" @click="retryLiff">ลองใหม่</button>
+      </div>
+    </div>
+
+    <!-- Regular browser: show login card -->
+    <Card v-else class="login-card" style="border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3)">
       <template #content>
         <div class="login-logo">
           <div class="logo-icon">🐾</div>
@@ -20,19 +35,7 @@
           {{ errorMsg }}
         </Message>
 
-        <!-- LIFF (LINE) login — shown only inside LINE app -->
-        <button v-if="isLiffBrowser" class="line-btn" :disabled="loading" @click="handleLiffLogin">
-          <span class="line-icon" v-if="!loading">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
-              <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-            </svg>
-          </span>
-          <ProgressSpinner v-else style="width:20px;height:20px;margin-right:8px" strokeWidth="4" />
-          <span>{{ loading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบด้วย LINE' }}</span>
-        </button>
-
-        <!-- Google login — shown in regular browser -->
-        <button v-else class="google-btn" :disabled="loading" @click="handleGoogleLogin">
+        <button class="google-btn" :disabled="loading" @click="handleGoogleLogin">
           <span class="google-icon" v-if="!loading">
             <svg viewBox="0 0 48 48" width="20" height="20">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -65,13 +68,14 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const errorMsg = ref('')
 
-// Pre-detect LINE in-app browser via UA before LIFF init completes
+// UA pre-detection: LINE in-app browser always contains "Line/"
 const isLiffBrowser = ref(/Line\//i.test(navigator.userAgent))
 
-onMounted(async () => {
-  if (!isLiffBrowser.value) return
+onMounted(() => {
+  if (isLiffBrowser.value) runLiffLogin()
+})
 
-  loading.value = true
+async function runLiffLogin() {
   errorMsg.value = ''
 
   try {
@@ -79,37 +83,29 @@ onMounted(async () => {
     isLiffBrowser.value = isInLiff()
   } catch (err) {
     console.error('[LIFF init]', err)
-    loading.value = false
-    errorMsg.value = `LIFF เริ่มต้นไม่สำเร็จ: ${err?.message ?? err}`
+    // Show full error so we can diagnose what's actually failing
+    errorMsg.value = err?.message ?? String(err)
     return
   }
 
-  if (isLiffBrowser.value) {
-    await handleLiffLogin()
-  } else {
-    loading.value = false
-  }
-})
-
-async function handleLiffLogin() {
-  loading.value = true
-  errorMsg.value = ''
+  if (!isLiffBrowser.value) return
 
   const result = await authStore.loginWithLiff()
 
-  if (result.redirecting) return // page will navigate away to LINE login
-
-  loading.value = false
+  if (result.redirecting) return
 
   if (result.ok) {
     router.push('/dashboard')
+  } else if (result.error === 'user_not_registered') {
+    errorMsg.value = 'บัญชี LINE นี้ไม่มีสิทธิ์เข้าถึงระบบ กรุณาติดต่อผู้ดูแล'
   } else {
-    if (result.error === 'user_not_registered') {
-      errorMsg.value = 'บัญชี LINE นี้ไม่มีสิทธิ์เข้าถึงระบบ กรุณาติดต่อผู้ดูแล'
-    } else {
-      errorMsg.value = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
-    }
+    errorMsg.value = `เข้าสู่ระบบไม่สำเร็จ (${result.error})`
   }
+}
+
+function retryLiff() {
+  errorMsg.value = ''
+  runLiffLogin()
 }
 
 async function handleGoogleLogin() {
@@ -204,6 +200,38 @@ async function handleGoogleLogin() {
 .google-icon { display: flex; align-items: center; }
 
 .login-footer { text-align: center; margin-top: 20px; }
+
+.liff-overlay {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.liff-loading,
+.liff-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  max-width: 320px;
+}
+
+.retry-btn {
+  padding: 10px 28px;
+  background: #fff;
+  color: #06C755;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
 
 .line-btn {
   display: flex;
