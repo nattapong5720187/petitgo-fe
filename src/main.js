@@ -38,6 +38,9 @@ import router from './router'
 import { authReady } from './firebase'
 import { useAuthStore } from './stores/auth'
 
+const { default: VConsole } = await import('vconsole')
+  new VConsole()
+
 const PetitgoPreset = definePreset(Aura, {
   semantic: {
     primary: {
