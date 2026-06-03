@@ -57,11 +57,6 @@ const PetitgoPreset = definePreset(Aura, {
 })
 
 ;(async () => {
-  if (import.meta.env.DEV) {
-    const { default: VConsole } = await import('vconsole')
-    new VConsole()
-  }
-
   const app = createApp(App)
   const pinia = createPinia()
 
