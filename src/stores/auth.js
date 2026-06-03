@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider } from '@/firebase'
 import api from '@/services/api'
-import { initLiff, isInLiff, isLiffLoggedIn, liffLogin, getLiffAccessToken } from '@/services/liff'
+import { initLiff, isInLiff, isLiffLoggedIn, getLiffAccessToken } from '@/services/liff'
 
 const TOKEN_KEY = 'petitgo_access_token'
 
@@ -60,14 +60,12 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await initLiff()
 
+      if (!isInLiff()) {
+        return { ok: false, error: 'not_in_liff_browser' }
+      }
+
       if (!isLiffLoggedIn()) {
-        // Per LIFF reference: liff.login() cannot be used inside LIFF browser —
-        // login is automatic on liff.init(). Only call it in external browser.
-        if (isInLiff()) {
-          return { ok: false, error: 'liff_not_logged_in' }
-        }
-        liffLogin(window.location.href)
-        return { ok: false, redirecting: true }
+        return { ok: false, error: 'liff_not_logged_in' }
       }
 
       const lineAccessToken = getLiffAccessToken()
@@ -93,8 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       return { ok: true }
     } catch (err) {
-      console.error('[loginWithLiff]', err)
-      return { ok: false, error: 'unknown' }
+      return { ok: false, error: String(err?.message ?? err) }
     }
   }
 

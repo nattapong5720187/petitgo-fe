@@ -66,7 +66,6 @@ const PetitgoPreset = definePreset(Aura, {
   const pinia = createPinia()
 
   app.use(pinia)
-  app.use(router)
   app.use(PrimeVue, {
     theme: {
       preset: PetitgoPreset,
@@ -107,14 +106,23 @@ const PetitgoPreset = definePreset(Aura, {
   app.component('Chip', Chip)
 
   const authStore = useAuthStore()
-  await authReady
 
-  if (authStore.isLoggedIn) {
-    const ok = await authStore.fetchMe()
-    if (!ok) {
-      await router.replace('/login')
+  if (/Line\//i.test(navigator.userAgent)) {
+    // LIFF browser: run login BEFORE adding the router.
+    // If we add the router first, its guard changes the URL to /login which
+    // strips liff.state params — LIFF SDK then redirects back to restore them,
+    // the guard strips them again, infinite loop.
+    await authStore.loginWithLiff()
+  } else {
+    await authReady
+    if (authStore.isLoggedIn) {
+      const ok = await authStore.fetchMe()
+      if (!ok) {
+        localStorage.removeItem('petitgo_access_token')
+      }
     }
   }
 
+  app.use(router)
   app.mount('#app')
 })()
