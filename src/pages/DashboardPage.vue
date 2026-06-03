@@ -1,11 +1,5 @@
 <template>
   <div class="dashboard">
-    <!-- No API key warning -->
-    <Message v-if="!sheetsStore.apiKey" severity="warn" :closable="false" style="margin-bottom: 20px">
-      ยังไม่ได้ตั้งค่า Google Sheets API Key
-      <Button text severity="warn" label="ไปที่หน้าตั้งค่า →" style="margin-left: 8px; padding: 0" @click="$router.push('/settings')" />
-    </Message>
-
     <!-- Refresh Button -->
     <div style="display: flex; justify-content: flex-end; margin-bottom: 16px">
       <Button
