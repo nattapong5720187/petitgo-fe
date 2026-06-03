@@ -1,5 +1,10 @@
 import api from './api'
 
+export async function getTimesheetStat(year, month) {
+  const res = await api.get('/timesheet/stat', { params: { year, month } })
+  return res.data
+}
+
 export async function createTimesheet(data) {
   const res = await api.post('/timesheet', data)
   return res.data

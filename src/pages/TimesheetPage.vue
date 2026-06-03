@@ -5,6 +5,26 @@
       <Tag value="คลิกที่วันที่เพื่อบันทึกเวลา" severity="info" />
     </div>
 
+    <!-- Stat Cards -->
+    <div class="stat-grid">
+      <div class="stat-card stat-total">
+        <div class="stat-label">ทั้งหมด</div>
+        <div class="stat-value">{{ stat.total }}</div>
+      </div>
+      <div class="stat-card stat-approved">
+        <div class="stat-label">อนุมัติแล้ว</div>
+        <div class="stat-value">{{ stat.approved }}</div>
+      </div>
+      <div class="stat-card stat-waiting">
+        <div class="stat-label">รออนุมัติ</div>
+        <div class="stat-value">{{ stat.waiting }}</div>
+      </div>
+      <div class="stat-card stat-rejected">
+        <div class="stat-label">ปฏิเสธ</div>
+        <div class="stat-value">{{ stat.rejected }}</div>
+      </div>
+    </div>
+
     <Card style="border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06)">
       <template #content>
         <!-- Calendar Navigation -->
@@ -166,9 +186,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { createTimesheet, getTimesheets } from '@/services/timesheetService'
+import { createTimesheet, getTimesheets, getTimesheetStat } from '@/services/timesheetService'
 import { useAuthStore } from '@/stores/auth'
 
 const toast = useToast()
@@ -181,6 +201,8 @@ const showModal = ref(false)
 const saving = ref(false)
 const timesheets = ref([])
 const errors = ref({})
+
+const stat = ref({ total: 0, approved: 0, waiting: 0, rejected: 0 })
 
 const showAdminModal = ref(false)
 const adminModalEntries = ref([])
@@ -339,11 +361,55 @@ async function loadTimesheets() {
   }
 }
 
-onMounted(loadTimesheets)
+async function loadStat() {
+  try {
+    stat.value = await getTimesheetStat(currentYear.value, currentMonth.value + 1)
+  } catch {
+    // silently ignore stat errors
+  }
+}
+
+watch([currentYear, currentMonth], loadStat)
+
+onMounted(() => {
+  loadTimesheets()
+  loadStat()
+})
 </script>
 
 <style scoped>
 .timesheet-page { }
+
+/* Stat Cards */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.stat-label { font-size: 13px; font-weight: 500; opacity: 0.88; }
+.stat-value { font-size: 32px; font-weight: 700; line-height: 1; }
+
+.stat-total    { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.stat-approved { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.stat-waiting  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.stat-rejected { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-value { font-size: 26px; }
+}
 
 .cal-nav {
   display: flex;
