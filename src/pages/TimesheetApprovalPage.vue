@@ -3,11 +3,31 @@
     <div style="margin-bottom: 16px">
       <h2 style="margin: 0 0 12px; font-size:20px; font-weight:700">อนุมัติเวลาทำงาน</h2>
 
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+        <label style="font-size:14px; font-weight:600">ช่วงวันที่:</label>
+        <DatePicker
+          v-model="dateFrom"
+          dateFormat="dd/mm/yy"
+          placeholder="วันเริ่มต้น"
+          showIcon
+          style="width:160px"
+        />
+        <span style="font-size:14px">ถึง</span>
+        <DatePicker
+          v-model="dateTo"
+          dateFormat="dd/mm/yy"
+          placeholder="วันสิ้นสุด"
+          showIcon
+          style="width:160px"
+        />
+      </div>
+
       <Tabs v-model:value="statusFilter" @update:value="loadTimesheets">
         <TabList>
           <Tab value="">ทั้งหมด</Tab>
           <Tab value="REQUESTED">รอดำเนินการ</Tab>
           <Tab value="APPROVED">อนุมัติแล้ว</Tab>
+          <Tab value="SETTLED">จ่ายแล้ว</Tab>
           <Tab value="REJECTED">ปฏิเสธแล้ว</Tab>
         </TabList>
       </Tabs>
@@ -16,7 +36,7 @@
     <Card style="border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06)">
       <template #content>
         <DataTable
-          :value="timesheets"
+          :value="filteredTimesheets"
           :loading="loading"
           :paginator="true"
           :rows="20"
@@ -62,25 +82,35 @@
             </template>
           </Column>
 
-          <Column header="การดำเนินการ" style="min-width:180px">
+          <Column header="การดำเนินการ" style="min-width:200px">
             <template #body="{ data }">
-              <div v-if="data.status === 'REQUESTED'" style="display:flex; gap:6px">
+              <div style="display:flex; gap:6px; flex-wrap:wrap">
+                <template v-if="data.status === 'REQUESTED'">
+                  <Button
+                    label="อนุมัติ"
+                    severity="success"
+                    size="small"
+                    :loading="actionLoading"
+                    @click="approve(data)"
+                  />
+                  <Button
+                    label="ปฏิเสธ"
+                    severity="danger"
+                    size="small"
+                    outlined
+                    @click="openRejectModal(data)"
+                  />
+                </template>
                 <Button
-                  label="อนุมัติ"
-                  severity="success"
+                  v-else-if="data.status === 'APPROVED'"
+                  label="จ่ายแล้ว"
+                  severity="info"
                   size="small"
                   :loading="actionLoading"
-                  @click="approve(data)"
+                  @click="settle(data)"
                 />
-                <Button
-                  label="ปฏิเสธ"
-                  severity="danger"
-                  size="small"
-                  outlined
-                  @click="openRejectModal(data)"
-                />
+                <span v-else>-</span>
               </div>
-              <span v-else>-</span>
             </template>
           </Column>
         </DataTable>
@@ -114,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { getTimesheets, updateTimesheet, calcCompensation } from '@/services/timesheetService'
 
@@ -128,6 +158,10 @@ const showRejectModal = ref(false)
 const rejectRemark = ref('')
 const rejectTarget = ref(null)
 
+const now = new Date()
+const dateFrom = ref(new Date(now.getFullYear(), now.getMonth(), 1))
+const dateTo = ref(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+
 const typeLabels = {
   'OT-WD': 'OT วันทำงาน',
   'OT-DO': 'OT วันหยุด',
@@ -138,8 +172,21 @@ const typeLabels = {
 const statusConfig = {
   REQUESTED: { severity: 'warn', label: 'รอดำเนินการ' },
   APPROVED: { severity: 'success', label: 'อนุมัติแล้ว' },
+  SETTLED: { severity: 'info', label: 'จ่ายแล้ว' },
   REJECTED: { severity: 'danger', label: 'ปฏิเสธแล้ว' },
 }
+
+const filteredTimesheets = computed(() => {
+  return timesheets.value.filter(row => {
+    if (!row.startAt) return false
+    const t = new Date(row.startAt).getTime()
+    const from = dateFrom.value ? new Date(dateFrom.value).setHours(0, 0, 0, 0) : null
+    const to = dateTo.value ? new Date(dateTo.value).setHours(23, 59, 59, 999) : null
+    if (from && t < from) return false
+    if (to && t > to) return false
+    return true
+  })
+})
 
 function fmtDate(iso) {
   if (!iso) return '-'
@@ -162,6 +209,19 @@ async function approve(row) {
     const updated = await updateTimesheet(row.id, { status: 'APPROVED' })
     Object.assign(row, updated)
     toast.add({ severity: 'success', summary: 'สำเร็จ', detail: `อนุมัติ ${row.requesterName} สำเร็จ`, life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: 'ผิดพลาด', detail: 'ดำเนินการไม่สำเร็จ', life: 3000 })
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function settle(row) {
+  actionLoading.value = true
+  try {
+    const updated = await updateTimesheet(row.id, { status: 'SETTLED' })
+    Object.assign(row, updated)
+    toast.add({ severity: 'success', summary: 'สำเร็จ', detail: `บันทึกจ่ายแล้วสำเร็จ`, life: 3000 })
   } catch {
     toast.add({ severity: 'error', summary: 'ผิดพลาด', detail: 'ดำเนินการไม่สำเร็จ', life: 3000 })
   } finally {
