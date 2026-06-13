@@ -11,7 +11,7 @@
 
       <nav class="nav-menu">
         <button
-          v-for="item in menuItems"
+          v-for="item in baseMenuItems"
           :key="item.key"
           class="nav-item"
           :class="{ active: activeKey === item.key }"
@@ -21,6 +21,24 @@
           <i :class="['pi', item.icon, 'nav-icon']"></i>
           <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
         </button>
+
+        <template v-if="authStore.isAdmin">
+          <div class="nav-section">
+            <span v-if="!collapsed" class="nav-section-label">ผู้ดูแลระบบ</span>
+            <span v-else class="nav-section-divider"></span>
+          </div>
+          <button
+            v-for="item in adminMenuItems"
+            :key="item.key"
+            class="nav-item"
+            :class="{ active: activeKey === item.key }"
+            :title="collapsed ? item.label : ''"
+            @click="handleMenuSelect(item.key)"
+          >
+            <i :class="['pi', item.icon, 'nav-icon']"></i>
+            <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
+          </button>
+        </template>
       </nav>
 
       <button class="collapse-btn" @click="collapsed = !collapsed">
@@ -38,7 +56,7 @@
       </template>
       <nav class="nav-menu" style="padding-top: 8px">
         <button
-          v-for="item in menuItems"
+          v-for="item in baseMenuItems"
           :key="item.key"
           class="nav-item"
           :class="{ active: activeKey === item.key }"
@@ -47,6 +65,22 @@
           <i :class="['pi', item.icon, 'nav-icon']"></i>
           <span class="nav-label">{{ item.label }}</span>
         </button>
+
+        <template v-if="authStore.isAdmin">
+          <div class="nav-section">
+            <span class="nav-section-label">ผู้ดูแลระบบ</span>
+          </div>
+          <button
+            v-for="item in adminMenuItems"
+            :key="item.key"
+            class="nav-item"
+            :class="{ active: activeKey === item.key }"
+            @click="handleMenuSelect(item.key)"
+          >
+            <i :class="['pi', item.icon, 'nav-icon']"></i>
+            <span class="nav-label">{{ item.label }}</span>
+          </button>
+        </template>
       </nav>
     </Drawer>
 
@@ -109,15 +143,12 @@ const baseMenuItems = [
   { label: "บันทึกสลิป", key: "slip", icon: "pi-receipt" },
 ];
 
-const menuItems = computed(() => {
-  const items = [...baseMenuItems];
-  if (authStore.isAdmin) {
-    items.push({ label: "อนุมัติเวลาทำงาน", key: "timesheetapproval", icon: "pi-check-circle" });
-    items.push({ label: "จัดการผู้ใช้", key: "users", icon: "pi-users" });
-    items.push({ label: "ตั้งค่า", key: "settings", icon: "pi-cog" });
-  }
-  return items;
-});
+// Admin-only functions — rendered in a separate section, visible only to admins.
+const adminMenuItems = [
+  { label: "อนุมัติเวลาทำงาน", key: "timesheetapproval", icon: "pi-check-circle" },
+  { label: "จัดการผู้ใช้", key: "users", icon: "pi-users" },
+  { label: "ตั้งค่า", key: "settings", icon: "pi-cog" },
+];
 
 const userMenuItems = [{ label: "ออกจากระบบ", icon: "pi pi-sign-out", command: handleLogout }];
 
@@ -258,6 +289,27 @@ async function handleLogout() {
 .nav-label {
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* ── Admin section ── */
+.nav-section {
+  padding: 14px 18px 4px;
+}
+.nav-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+  white-space: nowrap;
+}
+.sidebar.collapsed .nav-section {
+  padding: 8px 12px;
+}
+.nav-section-divider {
+  display: block;
+  height: 1px;
+  background: var(--p-surface-200);
 }
 
 .collapse-btn {
