@@ -47,6 +47,11 @@ const routes = [
         component: () => import('@/pages/TimesheetPage.vue'),
       },
       {
+        path: 'slip',
+        name: 'Slip',
+        component: () => import('@/pages/SlipPage.vue'),
+      },
+      {
         path: 'timesheet-approval',
         name: 'TimesheetApproval',
         component: () => import('@/pages/TimesheetApprovalPage.vue'),

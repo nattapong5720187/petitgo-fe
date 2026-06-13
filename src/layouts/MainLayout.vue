@@ -106,6 +106,7 @@ const baseMenuItems = [
   { label: "Order Summary", key: "orders", icon: "pi-list" },
   { label: "จัดการกล่อง", key: "boxes", icon: "pi-box" },
   { label: "ลงเวลาทำงาน", key: "timesheet", icon: "pi-clock" },
+  { label: "บันทึกสลิป", key: "slip", icon: "pi-receipt" },
 ];
 
 const menuItems = computed(() => {
@@ -132,6 +133,7 @@ const pageTitles = {
   orders: "Order Summary",
   boxes: "จัดการกล่อง",
   timesheet: "ลงเวลาทำงาน",
+  slip: "บันทึกสลิป",
   timesheetapproval: "อนุมัติเวลาทำงาน",
   settings: "ตั้งค่า",
   users: "จัดการผู้ใช้งาน",
@@ -144,6 +146,7 @@ const routeMap = {
   orders: "/orders",
   boxes: "/boxes",
   timesheet: "/timesheet",
+  slip: "/slip",
   timesheetapproval: "/timesheet-approval",
   settings: "/settings",
   users: "/users",

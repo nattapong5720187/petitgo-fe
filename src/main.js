@@ -32,6 +32,8 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Badge from 'primevue/badge'
 import Chip from 'primevue/chip'
+import FileUpload from 'primevue/fileupload'
+import Image from 'primevue/image'
 
 import App from './App.vue'
 import router from './router'
@@ -99,6 +101,8 @@ const PetitgoPreset = definePreset(Aura, {
   app.component('InputIcon', InputIcon)
   app.component('Badge', Badge)
   app.component('Chip', Chip)
+  app.component('FileUpload', FileUpload)
+  app.component('Image', Image)
 
   const authStore = useAuthStore()
 
