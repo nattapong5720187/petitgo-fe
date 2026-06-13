@@ -20,6 +20,17 @@
           showIcon
           style="width:160px"
         />
+
+        <label style="font-size:14px; font-weight:600; margin-left:8px">ผู้ใช้:</label>
+        <Select
+          v-model="userFilter"
+          :options="userOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="ทุกคน"
+          showClear
+          style="width:180px"
+        />
       </div>
 
       <Tabs v-model:value="statusFilter" @update:value="loadTimesheets">
@@ -31,6 +42,21 @@
           <Tab value="REJECTED">ปฏิเสธแล้ว</Tab>
         </TabList>
       </Tabs>
+    </div>
+
+    <div v-if="showCompensationSummary" class="comp-summary">
+      <div class="comp-summary-item">
+        <span class="comp-summary-label">จำนวนรายการ</span>
+        <span class="comp-summary-value">{{ filteredTimesheets.length }}</span>
+      </div>
+      <div class="comp-summary-divider"></div>
+      <div class="comp-summary-item">
+        <span class="comp-summary-label">
+          รวมค่าตอบแทน · {{ statusConfig[statusFilter]?.label }}
+          <template v-if="userFilter"> · {{ userFilter }}</template>
+        </span>
+        <span class="comp-summary-value primary">{{ fmtBaht(totalCompensation) }}</span>
+      </div>
     </div>
 
     <Card style="border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06)">
@@ -154,6 +180,7 @@ const timesheets = ref([])
 const loading = ref(false)
 const actionLoading = ref(false)
 const statusFilter = ref('')
+const userFilter = ref('')
 const showRejectModal = ref(false)
 const rejectRemark = ref('')
 const rejectTarget = ref(null)
@@ -176,9 +203,16 @@ const statusConfig = {
   REJECTED: { severity: 'danger', label: 'ปฏิเสธแล้ว' },
 }
 
+const userOptions = computed(() => {
+  const names = [...new Set(timesheets.value.map(r => r.requesterName).filter(Boolean))]
+  names.sort((a, b) => a.localeCompare(b, 'th'))
+  return [{ label: 'ทุกคน', value: '' }, ...names.map(n => ({ label: n, value: n }))]
+})
+
 const filteredTimesheets = computed(() => {
   return timesheets.value.filter(row => {
     if (!row.startAt) return false
+    if (userFilter.value && row.requesterName !== userFilter.value) return false
     const t = new Date(row.startAt).getTime()
     const from = dateFrom.value ? new Date(dateFrom.value).setHours(0, 0, 0, 0) : null
     const to = dateTo.value ? new Date(dateTo.value).setHours(23, 59, 59, 999) : null
@@ -187,6 +221,18 @@ const filteredTimesheets = computed(() => {
     return true
   })
 })
+
+// Compensation summary is only meaningful once entries are approved/settled.
+const showCompensationSummary = computed(
+  () => statusFilter.value === 'APPROVED' || statusFilter.value === 'SETTLED',
+)
+
+const totalCompensation = computed(() =>
+  filteredTimesheets.value.reduce(
+    (sum, row) => sum + calcCompensation(row.type, row.startAt, row.endAt),
+    0,
+  ),
+)
 
 function fmtDate(iso) {
   if (!iso) return '-'
@@ -198,9 +244,12 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 }
 
+function fmtBaht(amount) {
+  return `฿${Number(amount).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+}
+
 function fmtCompensation(row) {
-  const rate = calcCompensation(row.type, row.startAt, row.endAt)
-  return `฿${rate.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+  return fmtBaht(calcCompensation(row.type, row.startAt, row.endAt))
 }
 
 async function approve(row) {
@@ -266,3 +315,41 @@ async function loadTimesheets() {
 
 onMounted(loadTimesheets)
 </script>
+
+<style scoped>
+.comp-summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--p-primary-50);
+  border: 1px solid var(--p-primary-200);
+}
+.comp-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.comp-summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+}
+.comp-summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--p-text-color);
+}
+.comp-summary-value.primary {
+  color: var(--p-primary-600);
+}
+.comp-summary-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--p-primary-200);
+}
+</style>
