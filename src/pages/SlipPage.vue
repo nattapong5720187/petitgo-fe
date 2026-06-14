@@ -58,13 +58,6 @@
               <span v-else class="muted">—</span>
             </template>
           </Column>
-
-          <Column header="เลขที่อ้างอิง" field="transRef" style="min-width: 180px">
-            <template #body="{ data }">
-              <span v-if="data.transRef" class="ref-text">{{ data.transRef }}</span>
-              <span v-else class="muted">—</span>
-            </template>
-          </Column>
         </DataTable>
       </template>
     </Card>
@@ -288,12 +281,6 @@ onMounted(loadSlips)
   font-weight: 600;
   color: var(--p-primary-600);
 }
-.ref-text {
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--p-text-muted-color);
-}
-
 :deep(.slip-thumb) {
   border-radius: 6px;
   object-fit: cover;
