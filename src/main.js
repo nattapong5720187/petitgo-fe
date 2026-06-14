@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import VConsole from 'vconsole'
 import PrimeVue from 'primevue/config'
 import { definePreset } from '@primeuix/themes'
 import Aura from '@primeuix/themes/aura'
@@ -59,6 +60,14 @@ const PetitgoPreset = definePreset(Aura, {
 })
 
 ;(async () => {
+  // On-screen console for debugging inside the LINE/LIFF in-app browser, where
+  // native devtools aren't available. Initialised as early as possible so it
+  // captures logs from the LIFF login flow below. Toggled via VITE_ENABLE_VCONSOLE
+  // (we avoid a ?query toggle because it would clobber LIFF's liff.state params).
+  if (import.meta.env.VITE_ENABLE_VCONSOLE === 'true') {
+    new VConsole()
+  }
+
   const app = createApp(App)
   const pinia = createPinia()
 
