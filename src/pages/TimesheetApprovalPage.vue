@@ -44,20 +44,40 @@
       </Tabs>
     </div>
 
-    <div v-if="showCompensationSummary" class="comp-summary">
-      <div class="comp-summary-item">
-        <span class="comp-summary-label">จำนวนรายการ</span>
-        <span class="comp-summary-value">{{ filteredTimesheets.length }}</span>
-      </div>
-      <div class="comp-summary-divider"></div>
-      <div class="comp-summary-item">
-        <span class="comp-summary-label">
-          รวมค่าตอบแทน · {{ statusConfig[statusFilter]?.label }}
-          <template v-if="userFilter"> · {{ userFilter }}</template>
-        </span>
-        <span class="comp-summary-value primary">{{ fmtBaht(totalCompensation) }}</span>
-      </div>
-    </div>
+    <Card class="comp-card">
+      <template #content>
+        <div class="comp-summary">
+          <div class="comp-summary-item">
+            <span class="comp-summary-label">รวมค่าตอบแทน (ประมาณ)</span>
+            <span class="comp-summary-value primary">{{ fmtBaht(totalCompensation) }}</span>
+            <span class="comp-summary-sub">{{ summaryContext }}</span>
+          </div>
+
+          <div class="comp-summary-divider"></div>
+
+          <div class="comp-summary-item">
+            <span class="comp-summary-label">จำนวนรายการ</span>
+            <span class="comp-summary-value">{{ filteredTimesheets.length }}</span>
+            <span class="comp-summary-sub">รายการ</span>
+          </div>
+
+          <!-- On the "ทั้งหมด" tab the total mixes statuses, so break it down. -->
+          <template v-if="!statusFilter && statusBreakdown.length">
+            <div class="comp-summary-divider"></div>
+            <div class="comp-summary-breakdown">
+              <div v-for="item in statusBreakdown" :key="item.status" class="comp-summary-chip">
+                <Tag
+                  :value="statusConfig[item.status]?.label || item.status"
+                  :severity="statusConfig[item.status]?.severity || 'secondary'"
+                />
+                <span class="comp-summary-chip-value">{{ fmtBaht(item.total) }}</span>
+                <span class="comp-summary-chip-count">({{ item.count }})</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </Card>
 
     <Card style="border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06)">
       <template #content>
@@ -222,17 +242,32 @@ const filteredTimesheets = computed(() => {
   })
 })
 
-// Compensation summary is only meaningful once entries are approved/settled.
-const showCompensationSummary = computed(
-  () => statusFilter.value === 'APPROVED' || statusFilter.value === 'SETTLED',
-)
-
 const totalCompensation = computed(() =>
   filteredTimesheets.value.reduce(
     (sum, row) => sum + calcCompensation(row.type, row.startAt, row.endAt),
     0,
   ),
 )
+
+const statusBreakdown = computed(() => {
+  const totals = {}
+  for (const row of filteredTimesheets.value) {
+    const bucket = (totals[row.status] ??= { status: row.status, total: 0, count: 0 })
+    bucket.total += calcCompensation(row.type, row.startAt, row.endAt)
+    bucket.count += 1
+  }
+  const order = Object.keys(statusConfig)
+  return Object.values(totals).sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
+})
+
+const summaryContext = computed(() => {
+  const parts = [statusConfig[statusFilter.value]?.label || 'ทุกสถานะ']
+  if (dateFrom.value || dateTo.value) {
+    parts.push(`${fmtDate(dateFrom.value)} - ${fmtDate(dateTo.value)}`)
+  }
+  parts.push(userFilter.value || 'ทุกคน')
+  return parts.join(' · ')
+})
 
 function fmtDate(iso) {
   if (!iso) return '-'
@@ -317,21 +352,25 @@ onMounted(loadTimesheets)
 </script>
 
 <style scoped>
+.comp-card {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
 .comp-summary {
   display: flex;
   align-items: center;
   gap: 24px;
   flex-wrap: wrap;
-  padding: 14px 20px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  background: var(--p-primary-50);
-  border: 1px solid var(--p-primary-200);
 }
 .comp-summary-item {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.comp-summary-sub {
+  font-size: 11px;
+  color: var(--p-text-muted-color);
 }
 .comp-summary-label {
   font-size: 12px;
@@ -350,6 +389,27 @@ onMounted(loadTimesheets)
 .comp-summary-divider {
   width: 1px;
   align-self: stretch;
-  background: var(--p-primary-200);
+  min-height: 44px;
+  background: var(--p-content-border-color);
+}
+.comp-summary-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+}
+.comp-summary-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.comp-summary-chip-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+.comp-summary-chip-count {
+  font-size: 12px;
+  color: var(--p-text-muted-color);
 }
 </style>
