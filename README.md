@@ -60,7 +60,7 @@ Leave out the `/api` suffix: the proxy keeps the `/api` path when it forwards.
 | `VITE_LIFF_ID` | LINE LIFF app ID for login inside LINE |
 | `VITE_ENABLE_VCONSOLE` | `true` shows an on-screen console. Useful for debugging inside LINE, where there are no devtools |
 
-`VITE_API_ORIGIN`, `VITE_GOOGLE_SHEETS_API_KEY` and `VITE_SPREADSHEET_ID` are listed in `.env.example` and the deploy workflow, but nothing in the code reads them. The Google Sheets key and spreadsheet ID are entered on the **Settings** page and stored in the browser.
+`VITE_GOOGLE_SHEETS_API_KEY` and `VITE_SPREADSHEET_ID` are listed in `.env.example` and the deploy workflow, but nothing in the code reads them. The Google Sheets key and spreadsheet ID are entered on the **Settings** page and stored in the browser.
 
 Every `VITE_*` value is compiled into the public JavaScript bundle. Never put real secrets in them.
 
@@ -92,6 +92,8 @@ Pushing to `main` runs `.github/workflows/firebase-deploy.yml`, which does:
 2. **test**, currently a placeholder
 3. **deploy** `dist/` to Firebase Hosting (`pet-it-go`, live channel)
 
-`VITE_*` values are baked in at build time. After changing a secret, such as `VITE_API_BASE_URL` (GitHub → Settings → Secrets and variables → Actions), redeploy by re-running the workflow or pushing to `main`. The new value only takes effect after that rebuild.
+`VITE_*` values are baked in at build time. After changing a secret (GitHub → Settings → Secrets and variables → Actions), redeploy by re-running the workflow or pushing to `main`. The new value only takes effect after that rebuild.
+
+The Content Security Policy in `index.html` allows the API host through a `__API_ORIGIN__` placeholder. `vite.config.js` fills it in at build time with the origin of `VITE_API_BASE_URL`, so moving the API only needs that one secret changed. Don't edit `dist/` by hand: it's rebuilt on every deploy.
 
 Hosting rewrites every path to `index.html` (SPA routing) and sets `Cross-Origin-Opener-Policy: same-origin-allow-popups` so Google sign-in popups work.
