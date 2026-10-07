@@ -63,6 +63,12 @@ const routes = [
         component: () => import('@/pages/CookiePage.vue'),
         meta: { requiresAdmin: true },
       },
+      {
+        path: 'jobs',
+        name: 'Jobs',
+        component: () => import('@/pages/JobPage.vue'),
+        meta: { requiresAdmin: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },

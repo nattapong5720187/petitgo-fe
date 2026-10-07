@@ -148,6 +148,7 @@ const adminMenuItems = [
   { label: "อนุมัติเวลาทำงาน", key: "timesheetapproval", icon: "pi-check-circle" },
   { label: "จัดการผู้ใช้", key: "users", icon: "pi-users" },
   { label: "BigSeller Cookie", key: "cookies", icon: "pi-key" },
+  { label: "Scheduler Jobs", key: "jobs", icon: "pi-calendar-clock" },
   { label: "ตั้งค่า", key: "settings", icon: "pi-cog" },
 ];
 
@@ -170,6 +171,7 @@ const pageTitles = {
   settings: "ตั้งค่า",
   users: "จัดการผู้ใช้งาน",
   cookies: "BigSeller Cookie",
+  jobs: "Scheduler Jobs",
 };
 
 const pageTitle = computed(() => pageTitles[route.name?.toLowerCase()] || "Petitgo");
@@ -184,6 +186,7 @@ const routeMap = {
   settings: "/settings",
   users: "/users",
   cookies: "/cookies",
+  jobs: "/jobs",
 };
 
 function handleMenuSelect(key) {
