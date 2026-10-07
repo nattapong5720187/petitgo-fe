@@ -147,6 +147,7 @@ const baseMenuItems = [
 const adminMenuItems = [
   { label: "อนุมัติเวลาทำงาน", key: "timesheetapproval", icon: "pi-check-circle" },
   { label: "จัดการผู้ใช้", key: "users", icon: "pi-users" },
+  { label: "BigSeller Cookie", key: "cookies", icon: "pi-key" },
   { label: "ตั้งค่า", key: "settings", icon: "pi-cog" },
 ];
 
@@ -168,6 +169,7 @@ const pageTitles = {
   timesheetapproval: "อนุมัติเวลาทำงาน",
   settings: "ตั้งค่า",
   users: "จัดการผู้ใช้งาน",
+  cookies: "BigSeller Cookie",
 };
 
 const pageTitle = computed(() => pageTitles[route.name?.toLowerCase()] || "Petitgo");
@@ -181,6 +183,7 @@ const routeMap = {
   timesheetapproval: "/timesheet-approval",
   settings: "/settings",
   users: "/users",
+  cookies: "/cookies",
 };
 
 function handleMenuSelect(key) {

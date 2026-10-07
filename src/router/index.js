@@ -57,6 +57,12 @@ const routes = [
         component: () => import('@/pages/TimesheetApprovalPage.vue'),
         meta: { requiresAdmin: true },
       },
+      {
+        path: 'cookies',
+        name: 'Cookies',
+        component: () => import('@/pages/CookiePage.vue'),
+        meta: { requiresAdmin: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
